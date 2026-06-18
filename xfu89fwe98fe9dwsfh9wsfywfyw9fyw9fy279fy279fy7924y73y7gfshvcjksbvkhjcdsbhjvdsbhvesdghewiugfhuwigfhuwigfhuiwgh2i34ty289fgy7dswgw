@@ -455,8 +455,67 @@ if okEnv and env then
     env.__ResolveUserToIdShared = resolveUserToId
 end
 
+local function getGloryAvatarConfig()
+    local glory = shared and shared.glory
+    local character = glory and glory["Character"]
+    return character and character["Avatar"]
+end
+
+local function isGloryAvatarEnabled()
+    local cfg = getGloryAvatarConfig()
+    return cfg and cfg.Enabled == true
+end
+
+local function getGloryAvatarTargetInput()
+    local cfg = getGloryAvatarConfig()
+    if not cfg then return nil end
+    local target = cfg.Target
+    if target == nil or tostring(target) == "" then return nil end
+    return tostring(target)
+end
+
+local function getGloryBodyScaleValues()
+    local cfg = getGloryAvatarConfig()
+    local scaleCfg = cfg and cfg.CustomBodyScale
+    if not scaleCfg or scaleCfg.Enabled ~= true then return nil end
+    local values = scaleCfg.Values or {}
+    return {
+        WidthScale = values.WidthScale or 0.5,
+        DepthScale = values.DepthScale or 0.5,
+        HeightScale = values.HeightScale or 1,
+        HeadScale = values.HeadScale or 0.85,
+        ProportionScale = values.ProportionScale or 0,
+        BodyTypeScale = values.BodyTypeScale or 0,
+        enforceIntervalSeconds = 0.8,
+    }
+end
+
+local function buildGloryScaleKey(scaleValues)
+    if not scaleValues then return "off" end
+    return string.format("%.4f_%.4f_%.4f_%.4f_%.4f_%.4f",
+        scaleValues.BodyTypeScale,
+        scaleValues.DepthScale,
+        scaleValues.HeadScale,
+        scaleValues.HeightScale,
+        scaleValues.ProportionScale,
+        scaleValues.WidthScale
+    )
+end
+
 local function getDefaultTargetUserId()
+    local target = getGloryAvatarTargetInput()
+    if target then return resolveUserToId(target) end
     return resolveUserToId(CONFIG.target)
+end
+
+local function resolveActiveTargetUserId()
+    if isGloryAvatarEnabled() then
+        local target = getGloryAvatarTargetInput()
+        if target then
+            return resolveUserToId(target)
+        end
+    end
+    return runtimeState.currentUserId or targetUserId or getDefaultTargetUserId()
 end
 
 local function destroyColorSnapshot(snapshot)
@@ -674,31 +733,14 @@ local function scaleAllAccessories(char, sourcePartSizeMap, charPartMap, attachm
 end
 
 local function applyCustomScalesToDescription(desc)
-    local cfg = CONFIG and CONFIG.zjqfhm
-    if not cfg or cfg.enabled == false or not desc then return end
-    desc.HeightScale     = cfg.HeightScale
-    desc.WidthScale      = cfg.WidthScale
-    desc.DepthScale      = cfg.DepthScale
-    desc.HeadScale       = cfg.HeadScale
-    desc.BodyTypeScale   = cfg.BodyTypeScale
+    local cfg = getGloryBodyScaleValues()
+    if not cfg or not desc then return end
+    desc.HeightScale = cfg.HeightScale
+    desc.WidthScale = cfg.WidthScale
+    desc.DepthScale = cfg.DepthScale
+    desc.HeadScale = cfg.HeadScale
+    desc.BodyTypeScale = cfg.BodyTypeScale
     desc.ProportionScale = cfg.ProportionScale
-end
-
-local function getLiveGloryAvatarTargetUserId()
-    if not okEnv or not env then return nil end
-    local getCfg = env.GloryGetAvatarConfig
-    if type(getCfg) ~= "function" then return nil end
-    local ok, cfg = pcall(getCfg)
-    if not ok or type(cfg) ~= "table" or cfg.Enabled == false then return nil end
-    local target = cfg.Target
-    if target == nil or tostring(target) == "" then return nil end
-    return resolveUserToId(target)
-end
-
-local function resolveActiveTargetUserId()
-    local liveUid = getLiveGloryAvatarTargetUserId()
-    if liveUid then return liveUid end
-    return runtimeState.currentUserId or targetUserId or getDefaultTargetUserId()
 end
 
 local function applyBodyFromDescription(targetDesc, char)
@@ -781,8 +823,8 @@ end
 local pqzlwt = 0
 
 local function kfdkdl(character)
-    local cfg = CONFIG and CONFIG.zjqfhm
-    if not cfg or cfg.enabled == false then return end
+    local cfg = getGloryBodyScaleValues()
+    if not cfg then return end
     if not character or not character.Parent then return end
     local hum = character:FindFirstChildOfClass("Humanoid")
     if not hum then return end
@@ -810,8 +852,7 @@ end
 local function xmvnrp(character)
     pqzlwt = pqzlwt + 1
     local myToken = pqzlwt
-    local cfg = CONFIG and CONFIG.zjqfhm
-    local interval = (cfg and tonumber(cfg.enforceIntervalSeconds)) or 0.8
+    local interval = 0.8
     task.spawn(function()
         while myToken == pqzlwt do
             task.wait(interval)
@@ -832,20 +873,28 @@ end
 if okEnv and env then
     env.nxhbtc = {
         Set = function(opts)
-            if type(opts) ~= "table" then return end
-            for k, v in pairs(opts) do
-                if CONFIG.zjqfhm[k] ~= nil then CONFIG.zjqfhm[k] = v end
+            local cfg = getGloryAvatarConfig()
+            local scaleCfg = cfg and cfg.CustomBodyScale
+            local values = scaleCfg and scaleCfg.Values
+            if type(opts) == "table" and values then
+                for k, v in pairs(opts) do
+                    if values[k] ~= nil then values[k] = v end
+                end
             end
             kfdkdl(localPlayer.Character)
         end,
         Enable = function()
-            CONFIG.zjqfhm.enabled = true
+            local cfg = getGloryAvatarConfig()
+            local scaleCfg = cfg and cfg.CustomBodyScale
+            if scaleCfg then scaleCfg.Enabled = true end
             kfdkdl(localPlayer.Character)
             xmvnrp(localPlayer.Character)
         end,
         Disable = function()
-            CONFIG.zjqfhm.enabled = false
-            pqzlwt = pqzlwt + 1 
+            local cfg = getGloryAvatarConfig()
+            local scaleCfg = cfg and cfg.CustomBodyScale
+            if scaleCfg then scaleCfg.Enabled = false end
+            pqzlwt = pqzlwt + 1
         end,
         Reapply = function()
             kfdkdl(localPlayer.Character)
@@ -1203,10 +1252,14 @@ if okEnv and env then
     env.CopyOutfitCleanup    = teardown
 end
 
+local lastSyncedAvatarTarget
+local lastSyncedAvatarScaleKey
+
 characterAddedConn = localPlayer.CharacterAdded:Connect(function(char)
     if not runtimeState.active then return end
     local respawnToken = applySerial
     disconnectAppearanceHooks()
+    lastSyncedAvatarTarget = getGloryAvatarTargetInput()
     local uid = resolveActiveTargetUserId()
     if not uid then return end
     local hum = char:WaitForChild("Humanoid", 10)
@@ -1221,13 +1274,43 @@ end)
 
 if localPlayer.Character then
     local hum = localPlayer.Character:WaitForChild("Humanoid", 10)
-    if hum then
-        local startupUserId = runtimeState.currentUserId or getDefaultTargetUserId()
+    if hum and isGloryAvatarEnabled() then
+        local startupUserId = resolveActiveTargetUserId()
         if startupUserId then apply(startupUserId) end
         kfdkdl(localPlayer.Character)
         xmvnrp(localPlayer.Character)
     end
 end
+
+lastSyncedAvatarTarget = getGloryAvatarTargetInput()
+lastSyncedAvatarScaleKey = buildGloryScaleKey(getGloryBodyScaleValues())
+
+RunService.Heartbeat:Connect(function()
+    if not runtimeState.active then return end
+    if not isGloryAvatarEnabled() then return end
+
+    local targetInput = getGloryAvatarTargetInput()
+    if targetInput and targetInput ~= lastSyncedAvatarTarget then
+        lastSyncedAvatarTarget = targetInput
+        local uid = resolveUserToId(targetInput)
+        if uid then
+            targetUserId = uid
+            runtimeState.currentUserId = uid
+            apply(uid)
+        end
+    end
+
+    local scaleKey = buildGloryScaleKey(getGloryBodyScaleValues())
+    if scaleKey ~= lastSyncedAvatarScaleKey then
+        lastSyncedAvatarScaleKey = scaleKey
+        if getGloryBodyScaleValues() then
+            kfdkdl(localPlayer.Character)
+            xmvnrp(localPlayer.Character)
+        else
+            pqzlwt = pqzlwt + 1
+        end
+    end
+end)
 
 local LOCAL_PLAYER = localPlayer
 
@@ -1259,7 +1342,7 @@ local animState = {
     connections              = {},
     originalByCharacter      = {},
     directControllerByChar   = {},
-    lastTargetInput          = CONFIG.target,
+    lastTargetInput          = getGloryAvatarTargetInput() or "",
     pinnedTargetUserId       = nil,
     lastSourceUserId         = nil,
     applyToken               = 0,
@@ -2125,7 +2208,7 @@ end
 
 local emoteState = {
     active          = true,
-    targetInput     = CONFIG.target,
+    targetInput     = getGloryAvatarTargetInput() or "",
     currentUserId   = nil,
     applyToken      = 0,
     connections     = {},
@@ -2336,19 +2419,19 @@ local function reapplyEmotes()
     if emoteState.currentUserId then
         return mimicEmotesFromUserId(emoteState.currentUserId)
     end
-    return mimicEmotesFromTarget(emoteState.targetInput or CONFIG.target)
+    return mimicEmotesFromTarget(emoteState.targetInput or getGloryAvatarTargetInput() or "")
 end
 
 local function useDefaultEmoteTarget()
     emoteState.currentUserId = nil
-    return mimicEmotesFromTarget(CONFIG.target)
+    return mimicEmotesFromTarget(getGloryAvatarTargetInput() or "")
 end
 
 local function applyCurrentEmoteSelection()
     if emoteState.currentUserId then
         return mimicEmotesFromUserId(emoteState.currentUserId)
     end
-    return mimicEmotesFromTarget(emoteState.targetInput or CONFIG.target)
+    return mimicEmotesFromTarget(emoteState.targetInput or getGloryAvatarTargetInput() or "")
 end
 
 local function emoteCleanup()
@@ -2401,7 +2484,7 @@ end
 
 task.defer(function()
     if not emoteState.active then return end
-    mimicEmotesFromTarget(CONFIG.target)
+    mimicEmotesFromTarget(getGloryAvatarTargetInput() or "")
 end)
 
 local function switchTargetSafe(target)
@@ -2448,7 +2531,7 @@ task.defer(function()
     elseif animState.lastTargetInput ~= nil then
         mimicAnimationsFromTarget(animState.lastTargetInput)
     else
-        mimicAnimationsFromTarget(CONFIG.target)
+        mimicAnimationsFromTarget(getGloryAvatarTargetInput() or "")
     end
 end)
 
