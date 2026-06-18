@@ -935,6 +935,7 @@ local function applyAppearance(userId, char, applyToken)
     applyCustomScalesToDescription(targetDesc)
 
     local bodyApplied = applyBodyFromDescription(targetDesc, char)
+    kfdkdl(char)
     task.wait()
 
     local postDescriptionColorSnapshot = nil
@@ -1266,6 +1267,9 @@ characterAddedConn = localPlayer.CharacterAdded:Connect(function(char)
     if not hum then return end
     task.wait(0.5)
     if not runtimeState.active or respawnToken ~= applySerial or not char.Parent then return end
+    lastSyncedAvatarTarget = getGloryAvatarTargetInput()
+    uid = resolveActiveTargetUserId()
+    if not uid then return end
     apply(uid)
 
     kfdkdl(char)
@@ -1292,11 +1296,14 @@ RunService.Heartbeat:Connect(function()
     local targetInput = getGloryAvatarTargetInput()
     if targetInput and targetInput ~= lastSyncedAvatarTarget then
         lastSyncedAvatarTarget = targetInput
+        lastSyncedAvatarScaleKey = nil
         local uid = resolveUserToId(targetInput)
         if uid then
             targetUserId = uid
             runtimeState.currentUserId = uid
             apply(uid)
+            kfdkdl(localPlayer.Character)
+            xmvnrp(localPlayer.Character)
         end
     end
 
