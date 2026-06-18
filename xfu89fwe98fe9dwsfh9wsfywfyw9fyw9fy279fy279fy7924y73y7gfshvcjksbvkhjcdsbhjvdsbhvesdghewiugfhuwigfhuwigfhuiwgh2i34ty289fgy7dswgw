@@ -1202,9 +1202,9 @@ local function cleanupForSwitch(char)
     clearCopyChildren(char)
 end
 
-local function apply(userId)
+local function apply(userId, charOverride)
     if not runtimeState.active then return end
-    local char = localPlayer.Character
+    local char = charOverride or localPlayer.Character
     if not char then return end
 
     applySerial               = applySerial + 1
@@ -1217,6 +1217,7 @@ local function apply(userId)
     task.spawn(function()
         if not runtimeState.active then return end
         if thisApply ~= applySerial then return end
+        if not char.Parent then return end
         applyAppearance(userId, char, thisApply)
     end)
 end
@@ -1258,19 +1259,16 @@ local lastSyncedAvatarScaleKey
 
 characterAddedConn = localPlayer.CharacterAdded:Connect(function(char)
     if not runtimeState.active then return end
-    local respawnToken = applySerial
     disconnectAppearanceHooks()
-    lastSyncedAvatarTarget = getGloryAvatarTargetInput()
-    local uid = resolveActiveTargetUserId()
-    if not uid then return end
     local hum = char:WaitForChild("Humanoid", 10)
     if not hum then return end
     task.wait(0.5)
-    if not runtimeState.active or respawnToken ~= applySerial or not char.Parent then return end
+    if not runtimeState.active or not char.Parent then return end
+
     lastSyncedAvatarTarget = getGloryAvatarTargetInput()
-    uid = resolveActiveTargetUserId()
+    local uid = resolveActiveTargetUserId()
     if not uid then return end
-    apply(uid)
+    apply(uid, char)
 
     kfdkdl(char)
     xmvnrp(char)
