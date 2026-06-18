@@ -684,6 +684,23 @@ local function applyCustomScalesToDescription(desc)
     desc.ProportionScale = cfg.ProportionScale
 end
 
+local function getLiveGloryAvatarTargetUserId()
+    if not okEnv or not env then return nil end
+    local getCfg = env.GloryGetAvatarConfig
+    if type(getCfg) ~= "function" then return nil end
+    local ok, cfg = pcall(getCfg)
+    if not ok or type(cfg) ~= "table" or cfg.Enabled == false then return nil end
+    local target = cfg.Target
+    if target == nil or tostring(target) == "" then return nil end
+    return resolveUserToId(target)
+end
+
+local function resolveActiveTargetUserId()
+    local liveUid = getLiveGloryAvatarTargetUserId()
+    if liveUid then return liveUid end
+    return runtimeState.currentUserId or targetUserId or getDefaultTargetUserId()
+end
+
 local function applyBodyFromDescription(targetDesc, char)
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum or not targetDesc then return false end
@@ -1163,7 +1180,7 @@ if okEnv and env then
         apply(uid)
     end
     local function reapplyTarget()
-        local uid = runtimeState.currentUserId or targetUserId or getDefaultTargetUserId()
+        local uid = resolveActiveTargetUserId()
         if uid then apply(uid) end
     end
     local function useDefaultTarget()
@@ -1190,7 +1207,7 @@ characterAddedConn = localPlayer.CharacterAdded:Connect(function(char)
     if not runtimeState.active then return end
     local respawnToken = applySerial
     disconnectAppearanceHooks()
-    local uid = runtimeState.currentUserId or targetUserId or getDefaultTargetUserId()
+    local uid = resolveActiveTargetUserId()
     if not uid then return end
     local hum = char:WaitForChild("Humanoid", 10)
     if not hum then return end
