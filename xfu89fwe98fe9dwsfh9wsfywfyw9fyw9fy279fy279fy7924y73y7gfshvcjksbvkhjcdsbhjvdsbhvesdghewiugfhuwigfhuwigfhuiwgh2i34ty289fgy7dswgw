@@ -673,6 +673,17 @@ local function scaleAllAccessories(char, sourcePartSizeMap, charPartMap, attachm
     end
 end
 
+local function applyCustomScalesToDescription(desc)
+    local cfg = CONFIG and CONFIG.zjqfhm
+    if not cfg or cfg.enabled == false or not desc then return end
+    desc.HeightScale     = cfg.HeightScale
+    desc.WidthScale      = cfg.WidthScale
+    desc.DepthScale      = cfg.DepthScale
+    desc.HeadScale       = cfg.HeadScale
+    desc.BodyTypeScale   = cfg.BodyTypeScale
+    desc.ProportionScale = cfg.ProportionScale
+end
+
 local function applyBodyFromDescription(targetDesc, char)
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum or not targetDesc then return false end
@@ -855,6 +866,7 @@ local function applyAppearance(userId, char, applyToken)
     end
 
     local targetDesc = getTargetDescriptionCached(userId)
+    applyCustomScalesToDescription(targetDesc)
 
     local bodyApplied = applyBodyFromDescription(targetDesc, char)
     task.wait()
