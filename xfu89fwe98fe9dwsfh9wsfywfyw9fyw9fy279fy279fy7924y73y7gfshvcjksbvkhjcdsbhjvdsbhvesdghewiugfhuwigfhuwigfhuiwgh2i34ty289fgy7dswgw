@@ -1203,6 +1203,12 @@ local function cleanupForSwitch(char)
     clearCopyChildren(char)
 end
 
+local function finishApply(userId, char, opts)
+    if opts and type(opts.onComplete) == "function" then
+        pcall(opts.onComplete, char, userId)
+    end
+end
+
 local function apply(userId, charOverride, opts)
     opts = opts or {}
     if not runtimeState.active then return end
@@ -1212,17 +1218,20 @@ local function apply(userId, charOverride, opts)
     targetUserId = userId
     runtimeState.currentUserId = userId
 
+    applySerial = applySerial + 1
+
     if opts.respawn then
         cleanupForSwitch(char)
         task.spawn(function()
             if not runtimeState.active or not char.Parent then return end
             applyAppearance(userId, char, nil)
+            if not runtimeState.active or not char.Parent then return end
             kfdkdl(char)
+            finishApply(userId, char, opts)
         end)
         return
     end
 
-    applySerial = applySerial + 1
     local thisApply = applySerial
 
     cleanupForSwitch(char)
@@ -1232,26 +1241,38 @@ local function apply(userId, charOverride, opts)
         if thisApply ~= applySerial then return end
         if not char.Parent then return end
         applyAppearance(userId, char, thisApply)
+        if not runtimeState.active then return end
+        if thisApply ~= applySerial then return end
+        if not char.Parent then return end
+        kfdkdl(char)
+        finishApply(userId, char, opts)
     end)
 end
 
 if okEnv and env then
-    local function setTarget(newTarget)
+    local function setTarget(newTarget, opts)
+        opts = type(opts) == "table" and opts or nil
         local uid = resolveUserToId(newTarget)
         if not uid then return end
+        if targetUserId ~= uid or runtimeState.currentUserId ~= uid then
+            clearAvatarCaches()
+        end
         targetUserId               = uid
         runtimeState.currentUserId = uid
-        apply(uid)
+        apply(uid, nil, opts)
     end
-    local function reapplyTarget()
+    local function reapplyTarget(opts)
+        opts = type(opts) == "table" and opts or nil
         local uid = resolveActiveTargetUserId()
-        if uid then apply(uid) end
+        if uid then apply(uid, nil, opts) end
     end
-    local function useDefaultTarget()
+    local function useDefaultTarget(opts)
+        opts = type(opts) == "table" and opts or nil
         runtimeState.currentUserId = nil
         targetUserId = nil
+        clearAvatarCaches()
         local uid = getDefaultTargetUserId()
-        if uid then apply(uid) end
+        if uid then apply(uid, nil, opts) end
     end
     env.OutfitCopy = {
         SetTarget         = setTarget,
@@ -1270,16 +1291,6 @@ end
 local lastSyncedAvatarTarget
 local lastSyncedAvatarScaleKey
 
-if localPlayer.Character then
-    local hum = localPlayer.Character:WaitForChild("Humanoid", 10)
-    if hum and isGloryAvatarEnabled() then
-        local startupUserId = resolveActiveTargetUserId()
-        if startupUserId then apply(startupUserId) end
-        kfdkdl(localPlayer.Character)
-        xmvnrp(localPlayer.Character)
-    end
-end
-
 lastSyncedAvatarTarget = getGloryAvatarTargetInput()
 lastSyncedAvatarScaleKey = buildGloryScaleKey(getGloryBodyScaleValues())
 
@@ -1296,11 +1307,20 @@ RunService.Heartbeat:Connect(function()
         else
             local uid = resolveUserToId(targetInput)
             if uid then
+                if targetUserId ~= uid or runtimeState.currentUserId ~= uid then
+                    clearAvatarCaches()
+                end
                 targetUserId = uid
                 runtimeState.currentUserId = uid
-                apply(uid)
-                kfdkdl(localPlayer.Character)
-                xmvnrp(localPlayer.Character)
+                apply(uid, nil, {
+                    onComplete = function()
+                        local liveChar = localPlayer.Character
+                        if liveChar then
+                            kfdkdl(liveChar)
+                            xmvnrp(liveChar)
+                        end
+                    end,
+                })
             end
         end
     end
@@ -2337,6 +2357,30 @@ local function restoreCharacterColorsSafely(character, colorSnapshot)
     end)
 end
 
+local function getBaseDescriptionForEmoteApply(humanoid)
+    if isGloryAvatarEnabled() then
+        local uid = resolveActiveTargetUserId()
+        if uid then
+            local targetDesc = getTargetDescriptionCached(uid)
+            if targetDesc then
+                local okClone, clone = pcall(function() return targetDesc:Clone() end)
+                if okClone and clone then
+                    applyCustomScalesToDescription(clone)
+                    return clone
+                end
+            end
+        end
+    end
+
+    local okDesc, currentDesc = pcall(function() return humanoid:GetAppliedDescription() end)
+    if okDesc and currentDesc then
+        local okClone, clone = pcall(function() return currentDesc:Clone() end)
+        if okClone and clone then return clone end
+        return currentDesc
+    end
+    return nil
+end
+
 local function applyEmotesToHumanoid(humanoid, emoteData)
     if not humanoid or not emoteData then return false end
     if not hasUsableEmotePayload(emoteData) then return false end
@@ -2345,8 +2389,8 @@ local function applyEmotesToHumanoid(humanoid, emoteData)
     local colorSnapshot = snapshotCharacterColors(character)
     local scaleSnapshot = getCurrentScaleValues(humanoid)
 
-    local okDesc, currentDesc = pcall(function() return humanoid:GetAppliedDescription() end)
-    if not okDesc or not currentDesc then return false end
+    local currentDesc = getBaseDescriptionForEmoteApply(humanoid)
+    if not currentDesc then return false end
 
     local setAny = false
     if type(currentDesc.SetEmotes) == "function" then
@@ -2495,28 +2539,44 @@ if env then
     env.EmoteMimicCleanup     = emoteCleanup
 end
 
-task.defer(function()
-    if not emoteState.active then return end
-    mimicEmotesFromTarget(getGloryAvatarTargetInput() or "")
-end)
-
-local function switchTargetSafe(target)
-    if target == nil then return false end
-    local outfitTriggered = false
-    local outfitApi = env and env.OutfitCopy
-    if outfitApi and type(outfitApi.SetTarget) == "function" then
-        local ok = pcall(function() outfitApi.SetTarget(target) end)
-        outfitTriggered = ok
-    elseif env and type(env.CopySetUserId) == "function" then
-        local ok = pcall(function() env.CopySetUserId(target) end)
-        outfitTriggered = ok
-    end
+local function runAvatarMimicAfterOutfit(target)
     if animState.active then
         mimicAnimationsFromTarget(target)
     end
     if emoteState.active then
         mimicEmotesFromTarget(target)
     end
+end
+
+local function switchTargetSafe(target)
+    if target == nil then return false end
+
+    local targetText = tostring(target)
+    local outfitTriggered = false
+    local outfitApi = env and env.OutfitCopy
+    local afterOutfit = function()
+        runAvatarMimicAfterOutfit(targetText)
+    end
+
+    if targetText == "" then
+        if outfitApi and type(outfitApi.UseDefaultTarget) == "function" then
+            local ok = pcall(function() outfitApi.UseDefaultTarget({ onComplete = afterOutfit }) end)
+            outfitTriggered = ok
+        elseif env and type(env.CopyUseDefaultTarget) == "function" then
+            local ok = pcall(function() env.CopyUseDefaultTarget({ onComplete = afterOutfit }) end)
+            outfitTriggered = ok
+        end
+        return outfitTriggered
+    end
+
+    if outfitApi and type(outfitApi.SetTarget) == "function" then
+        local ok = pcall(function() outfitApi.SetTarget(targetText, { onComplete = afterOutfit }) end)
+        outfitTriggered = ok
+    elseif env and type(env.CopySetUserId) == "function" then
+        local ok = pcall(function() env.CopySetUserId(targetText, { onComplete = afterOutfit }) end)
+        outfitTriggered = ok
+    end
+
     return outfitTriggered
 end
 
@@ -2528,23 +2588,44 @@ local function handleCharacterRespawn(char)
     if not target or target == "" then return false end
 
     local uid = resolveUserToId(target)
+    if not uid then
+        uid = runtimeState.currentUserId or targetUserId
+    end
     if not uid then return false end
 
     lastSyncedAvatarTarget = target
     lastSyncedAvatarScaleKey = buildGloryScaleKey(getGloryBodyScaleValues())
 
-    apply(uid, char, { respawn = true })
-    kfdkdl(char)
-    xmvnrp(char)
-
-    if animState.active then
-        mimicAnimationsFromTarget(target)
-    end
-    if emoteState.active then
-        mimicEmotesFromTarget(target)
-    end
+    apply(uid, char, {
+        respawn = true,
+        onComplete = function()
+            if not char.Parent then return end
+            xmvnrp(char)
+            runAvatarMimicAfterOutfit(target)
+        end,
+    })
 
     return true
+end
+
+if localPlayer.Character then
+    task.spawn(function()
+        if not runtimeState.active or not isGloryAvatarEnabled() then return end
+        local char = localPlayer.Character
+        if not char then return end
+        local hum = char:WaitForChild("Humanoid", 10)
+        if not hum or not runtimeState.active then return end
+        local startupTarget = getGloryAvatarTargetInput() or ""
+        local startupUserId = resolveActiveTargetUserId()
+        if not startupUserId then return end
+        apply(startupUserId, nil, {
+            onComplete = function()
+                if not char.Parent then return end
+                xmvnrp(char)
+                runAvatarMimicAfterOutfit(startupTarget)
+            end,
+        })
+    end)
 end
 
 characterAddedConn = localPlayer.CharacterAdded:Connect(function(char)
@@ -2573,6 +2654,7 @@ end
 
 task.defer(function()
     if not animState.active then return end
+    if isGloryAvatarEnabled() then return end
     if animState.pinnedTargetUserId then
         mimicAnimationsFromUserId(animState.pinnedTargetUserId)
     elseif animState.lastSourceUserId then
@@ -2587,6 +2669,7 @@ end)
 if animState.settings.autoApplyOnRespawn then
     local conn = LOCAL_PLAYER.CharacterAdded:Connect(function(newCharacter)
         if not animState.active then return end
+        if isGloryAvatarEnabled() then return end
         animState.applyToken = animState.applyToken + 1
         local respawnToken = animState.applyToken
         pruneStaleCharacterAnimationState(newCharacter)
