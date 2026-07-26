@@ -1,1 +1,1 @@
-print("no lol");
+game.Players.LocalPlayer:Kick("down xD")
