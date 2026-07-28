@@ -1,1 +1,1 @@
-game.Players.LocalPlayer:Kick("down xD")
+warn("avatar changer disabled.")
