@@ -1,0 +1,12 @@
+if getgenv()["already_loaded"] then
+  return
+end
+
+already_loaded = true
+
+if LRM_INIT_SCRIPT then
+    LRM_INIT_SCRIPT(function()
+        script_key = shared.Ecco.General.Key
+end)
+
+loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/c69c0033d57088e7bae5fa7d6f49bdbe.lua"))()
