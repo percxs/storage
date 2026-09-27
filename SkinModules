@@ -976,6 +976,12 @@ local t44 = {
 			Crate = 999,
 			CFrame = CFrame.new(0.165, -0.53, 0.8, 0, 0, -1, 1, 0, 0, 0, -1, 0),
 			BorderColor = t5
+		},
+		Bunny = {
+			Rarity = "Exclusive",
+			CFrame = CFrame.new(0.114, -0.434, 0.329, -1, 0, 0, 0, 1, 0, 0, 0, -1),
+			BackCFrame = CFrame.new(-0.02, 0.094, 0.047),
+			BorderColor = t14
 		}
 	},
 	["[Bat]"] = {
@@ -2721,12 +2727,7 @@ t44["[Knife]"]["Reporter Hammer"] = {
 	CFrame = CFrame.new(-0.0201357603, -0.0473470688, -0.0000610351562, 1.94706445e-7, 0.999996185, -0.00275226892, -5.35878009e-10, -0.00275226892, -0.999996185, -1, 1.94707184e-7, -8.51092183e-15),
 	BorderColor = t15
 }
-t44["[Knife]"]["White Tanto"] = {
-	Rarity = "Exclusive",
-	NoTrade = true,
-	CFrame = CFrame.new(0.395452857, -0.00876617432, -0.0173950195, 4.89857682e-16, 1, 1.62920671e-7, 1, -2.70329972e-14, 1.62920628e-7, 1.62920628e-7, 1.62920671e-7, -1),
-	BorderColor = t14
-}
+t44["[Knife]"]["White Tanto"] = { Rarity = "Exclusive", CFrame = CFrame.new(0.395452857, -0.00876617432, -0.0173950195, 4.89857682e-16, 1, 1.62920671e-7, 1, -2.70329972e-14, 1.62920628e-7, 1.62920628e-7, 1.62920671e-7, -1), BorderColor = t14 }
 t44["[Knife]"].Blossom = { Rarity = "Exclusive", CFrame = CFrame.new(-0.599981308, 0.0271587372, -0.161071777, 0, 1, 0, -1, 0, 0, 0, 0, 1), BorderColor = t }
 t44["[Revolver]"].Blossom = {
 	Rarity = "Exclusive",
@@ -3536,5 +3537,68 @@ t44["[RPG]"].Dog = {
 	LauncherCFrame = CFrame.new(-0.3, 0.29, -0.4, 0, 0, -1, 0, 1, 0, 1, 0, 0),
 	LauncherMesh = script.Meshes.Dog.Rocket,
 	BorderColor = t10
+}
+t44["[RPG]"].ESKETIT = {
+	Rarity = "Exclusive",
+	TextureID = script.Meshes.ESKETIT.RPG,
+	CFrame = CFrame.new(),
+	LauncherCFrame = CFrame.new(-0.311, 0.298, 0.84),
+	LauncherMesh = script.Meshes.ESKETIT.Rocket,
+	BorderColor = t
+}
+t44["[Deagle]"].ETERNAL = {
+	DisplayName = "Eternal",
+	Rarity = "Exclusive",
+	TextureID = script.Meshes.ETERNAL.Deagle,
+	CFrame = CFrame.new(0, 0.017, 0, -1, 0, 0, 0, 1, 0, 0, 0, -1),
+	BorderColor = t23
+}
+t44["[Flintlock]"].ETERNAL = {
+	DisplayName = "Eternal",
+	Rarity = "Exclusive",
+	TextureID = script.Meshes.ETERNAL.Flint,
+	CFrame = CFrame.new(0, 0.2768, 0, -1, 0, 0, 0, 1, 0, 0, 0, -1),
+	BorderColor = t23
+}
+t44["[Double-Barrel SG]"].ETERNAL = {
+	DisplayName = "Eternal",
+	Rarity = "Exclusive",
+	TextureID = script.Meshes.ETERNAL.DB,
+	CFrame = CFrame.new(0, -0.2418, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0),
+	BorderColor = t23
+}
+t44["[TacticalShotgun]"].ETERNAL = {
+	DisplayName = "Eternal",
+	Rarity = "Exclusive",
+	TextureID = script.Meshes.ETERNAL.TacticalShotgun,
+	CFrame = CFrame.new(0, -0.0823, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0),
+	BorderColor = t23
+}
+t44["[Revolver]"].ETERNAL = {
+	DisplayName = "Eternal",
+	Rarity = "Exclusive",
+	TextureID = script.Meshes.ETERNAL.Rev,
+	CFrame = CFrame.new(0, -0.1086, 0, 0, 0, 1, 0, 1, 0, -1, 0, 0),
+	BorderColor = t23
+}
+t44["[Rifle]"].ETERNAL = {
+	DisplayName = "Eternal",
+	Rarity = "Exclusive",
+	TextureID = script.Meshes.ETERNAL.Rifle,
+	CFrame = CFrame.new(-0.75, 0.1074, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0),
+	BorderColor = t23
+}
+t44["[SMG]"].ETERNAL = {
+	DisplayName = "Eternal",
+	Rarity = "Exclusive",
+	TextureID = script.Meshes.ETERNAL.Uzi,
+	CFrame = CFrame.new(-0.5, -0.0502, 0, 0, 0, -1, 0, 1, 0, 1, 0, 0),
+	BorderColor = t23
+}
+t44["[Knife]"].ETERNAL = {
+	DisplayName = "Eternal",
+	Rarity = "Exclusive",
+	CFrame = CFrame.new(-0.2, 0.15, 0, 0, 1, 0, 0, 0, -1, -1, 0, 0),
+	BorderColor = t23
 }
 return t44
